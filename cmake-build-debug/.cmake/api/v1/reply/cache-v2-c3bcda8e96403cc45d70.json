@@ -1022,6 +1022,18 @@
 			"value" : "FALSE"
 		},
 		{
+			"name" : "SDL2_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "The directory containing a CMake configuration file for SDL2."
+				}
+			],
+			"type" : "PATH",
+			"value" : "/opt/homebrew/lib/cmake/SDL2"
+		},
+		{
 			"name" : "Starship_BINARY_DIR",
 			"properties" : 
 			[

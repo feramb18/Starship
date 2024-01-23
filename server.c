@@ -6,9 +6,22 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
-
+#include <SDL2/SDL.h>
 #define PORT 12345
-#define M 7
+#define GRID_SIZE 10
+#define DEBRIS_COUNT 5
+struct Debris {
+    int x, y;
+};
+void sendDebrisPositions(int sockfd, struct sockaddr_in *clientAddr) {
+    struct Debris debris[DEBRIS_COUNT];
+    for (int i = 0; i < DEBRIS_COUNT; i++) {
+        debris[i].x = rand() % GRID_SIZE;
+        debris[i].y = rand() % GRID_SIZE;
+    }
+    sendto(sockfd, debris, sizeof(debris), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr));
+    }
+
 int main() {
     int sockfd;
     struct sockaddr_in cliaddr;
@@ -21,24 +34,15 @@ int main() {
 
     memset(&cliaddr, 0, sizeof(cliaddr));
     cliaddr.sin_family = AF_INET;
-    cliaddr.sin_addr.s_addr = inet_addr("192.168.1.122"); // Imposta l'indirizzo IP del client
+    cliaddr.sin_addr.s_addr = inet_addr("192.168.1.213"); // Imposta l'indirizzo IP del client
     cliaddr.sin_port = htons(PORT);
 
     srand(time(0)); // Inizializzazione del generatore di numeri casuali
 
     while (1) {
-        // Genera e invia pacchetti rappresentanti detriti nella griglia
-        for (int i = 0; i < M; i++) {
-            for (int j = 0; j < M; j++) {
-                if (rand() % 2 == 1) { // Genera casualmente un detrito (1) o vuoto (0)
-                    char buffer[1024];
-                    snprintf(buffer, sizeof(buffer), "Detrito in posizione (%d, %d)", i, j);
-                    sendto(sockfd, buffer, strlen(buffer), 0, (const struct sockaddr *) &cliaddr, sizeof(cliaddr));
-                }
-            }
-        }
-
-        sleep(2); // Aspetta 2 secondi tra un'onda di meteoriti e l'altra
+        printf("Sending debris positions...\n");
+        sendDebrisPositions(sockfd, &cliaddr);
+        sleep(2); // Wait for 2 seconds
     }
     close(sockfd);
     return 0;
