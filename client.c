@@ -11,10 +11,37 @@
 #define PORT 12345
 #define GRID_SIZE 10
 #define DEBRIS_COUNT 5
+#define MAX_DEBRIS 50 // Numero massimo di detriti che possono essere gestiti contemporaneamente
+
 
 struct Debris {
     int x, y;
+    int active; // 1 se il detrito è attivo, 0 altrimenti
 };
+
+struct Debris debris[MAX_DEBRIS]; // Array per gestire più generazioni di detriti
+
+struct DebrisBatch {
+    struct Debris debris[DEBRIS_COUNT];
+    int batchId; // ID unico per ogni batch
+};
+
+void drawCircle(SDL_Renderer *renderer, int centerX, int centerY, int radius) {
+    int x, y, dx, dy, d;
+    for (y = -radius; y <= radius; y++) {
+        for (x = -radius; x <= radius; x++) {
+            dx = x * x;
+            dy = y * y;
+            d = dx + dy - radius * radius;
+
+            // Se il punto è all'interno o sulla circonferenza del cerchio
+            if (d <= 0) {
+                SDL_RenderDrawPoint(renderer, centerX + x, centerY + y);
+            }
+        }
+    }
+}
+
 int main() {
     int sockfd;
     struct sockaddr_in servaddr;
@@ -36,7 +63,7 @@ int main() {
     //implementazione libreria SDL//
 
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *window = SDL_CreateWindow("Space Debris", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    SDL_Window *window = SDL_CreateWindow("Starship", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
@@ -56,14 +83,15 @@ int main() {
             recvfrom(sockfd, debris, sizeof(debris), 0, NULL, NULL);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
-
-            // Draw debris
+                // Draw debris
             for (int i = 0; i < DEBRIS_COUNT; i++) {
-                SDL_Rect rect = {debris[i].x * (WINDOW_WIDTH / GRID_SIZE), debris[i].y * (WINDOW_HEIGHT / GRID_SIZE),
-                                 WINDOW_WIDTH / GRID_SIZE, WINDOW_HEIGHT / GRID_SIZE};
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-                SDL_RenderFillRect(renderer, &rect);
+                int centerX = debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
+                int centerY = (debris[i].y+1) * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
+                int radius = (WINDOW_WIDTH / GRID_SIZE / 2); // Imposta il raggio del cerchio
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Colore del cerchio
+                drawCircle(renderer, centerX, centerY, radius);
             }
+
 
             SDL_RenderPresent(renderer);
             SDL_Delay(100); // Delay for visual stability

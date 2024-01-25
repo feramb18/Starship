@@ -6,21 +6,37 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include <SDL2/SDL.h>
 #define PORT 12345
 #define GRID_SIZE 10
 #define DEBRIS_COUNT 5
+#define WINDOW_HEIGHT 10 // Assumi una certa "altezza della finestra" per la simulazione
+
 struct Debris {
     int x, y;
 };
-void sendDebrisPositions(int sockfd, struct sockaddr_in *clientAddr) {
-    struct Debris debris[DEBRIS_COUNT];
+
+struct Debris debris[DEBRIS_COUNT]; // Array globale per i detriti
+
+void initDebris() {
     for (int i = 0; i < DEBRIS_COUNT; i++) {
         debris[i].x = rand() % GRID_SIZE;
-        debris[i].y = rand() % GRID_SIZE;
+        debris[i].y = 0; // Inizio dall'alto
     }
+}
+
+void updateDebrisPositions() {
+    for (int i = 0; i < DEBRIS_COUNT; i++) {
+        debris[i].y += 1; // Fai "cadere" i detriti verso il basso
+        if (debris[i].y > WINDOW_HEIGHT) {
+        initDebris();
+        sleep(2); // Aspetta 2 secondi
+        }
+    }
+}
+
+void sendDebrisPositions(int sockfd, struct sockaddr_in *clientAddr) {
     sendto(sockfd, debris, sizeof(debris), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr));
-    }
+}
 
 int main() {
     int sockfd;
@@ -39,11 +55,15 @@ int main() {
 
     srand(time(0)); // Inizializzazione del generatore di numeri casuali
 
+    initDebris(); // Inizializza i detriti
+
+
     while (1) {
+        updateDebrisPositions(); // Aggiorna la posizione dei detriti
         printf("Sending debris positions...\n");
         sendDebrisPositions(sockfd, &cliaddr);
-        sleep(2); // Wait for 2 seconds
     }
+
     close(sockfd);
     return 0;
 }
