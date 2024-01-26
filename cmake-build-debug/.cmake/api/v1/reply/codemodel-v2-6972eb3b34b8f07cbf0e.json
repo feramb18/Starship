@@ -41,14 +41,14 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "Client::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-Client-Debug-b03db824196ca30f73e1.json",
+					"jsonFile" : "target-Client-Debug-c335ecd05e94529d5fef.json",
 					"name" : "Client",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "Server::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-Server-Debug-0e2c21b0a153c16b63ca.json",
+					"jsonFile" : "target-Server-Debug-df85c593a72af0021606.json",
 					"name" : "Server",
 					"projectIndex" : 0
 				}
@@ -58,8 +58,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/Users/ferdinandoambrosio/CLionProjects/Starship/cmake-build-debug",
-		"source" : "/Users/ferdinandoambrosio/CLionProjects/Starship"
+		"build" : "/Users/adrianoadamo/CLionProjects/Starship/cmake-build-debug",
+		"source" : "/Users/adrianoadamo/CLionProjects/Starship"
 	},
 	"version" : 
 	{

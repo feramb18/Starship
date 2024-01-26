@@ -16,7 +16,7 @@
 
 struct Debris {
     int x, y;
-    int active; // 1 se il detrito è attivo, 0 altrimenti
+    //int active; // 1 se il detrito è attivo, 0 altrimenti
 };
 
 struct Debris debris[MAX_DEBRIS]; // Array per gestire più generazioni di detriti
@@ -27,19 +27,10 @@ struct DebrisBatch {
 };
 
 void drawCircle(SDL_Renderer *renderer, int centerX, int centerY, int radius) {
-    int x, y, dx, dy, d;
-    for (y = -radius; y <= radius; y++) {
-        for (x = -radius; x <= radius; x++) {
-            dx = x * x;
-            dy = y * y;
-            d = dx + dy - radius * radius;
-
-            // Se il punto è all'interno o sulla circonferenza del cerchio
-            if (d <= 0) {
+    for (int y = -radius; y <= radius; y++)
+        for (int x = -radius; x <= radius; x++)
+            if (x * x + y * y <= radius * radius)
                 SDL_RenderDrawPoint(renderer, centerX + x, centerY + y);
-            }
-        }
-    }
 }
 
 int main() {
@@ -71,31 +62,39 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    while (1) {
-        while (!quit) {
-            // Gestione degli eventi
-            while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT) {
-                    quit = 1;
-                }
-                // Altri eventi, come input da tastiera, possono essere gestiti qui
-            }
-            recvfrom(sockfd, debris, sizeof(debris), 0, NULL, NULL);
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-                // Draw debris
-            for (int i = 0; i < DEBRIS_COUNT; i++) {
-                int centerX = debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
-                int centerY = (debris[i].y+1) * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
-                int radius = (WINDOW_WIDTH / GRID_SIZE / 2); // Imposta il raggio del cerchio
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Colore del cerchio
-                drawCircle(renderer, centerX, centerY, radius);
-            }
-
-
-            SDL_RenderPresent(renderer);
-            SDL_Delay(100); // Delay for visual stability
+    while (!quit) {
+        while (SDL_PollEvent(&event))
+            if (event.type == SDL_QUIT)
+                quit = 1;
+        int recvLen = recvfrom(sockfd, debris, sizeof(debris), 0, NULL, NULL);
+        if (recvLen < 0) {
+            perror("recvfrom failed");
+            continue; // Continua il ciclo se la ricezione fallisce
         }
+        if (recvfrom(sockfd, debris, sizeof(debris), 0, NULL, NULL) < 0) {
+            perror("recvfrom failed");
+            continue; // Prova a ricevere di nuovo nel prossimo ciclo
+        }
+
+        // Stampa di debug per i detriti ricevuti
+        for (int i = 0; i < DEBRIS_COUNT; i++) {
+            printf("Debris %d: x=%d, y=%d\n", i, debris[i].x, debris[i].y);
+        }
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
+        for (int i = 0; i < DEBRIS_COUNT; i++) {
+            int centerX = debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
+            int centerY = debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
+            int radius = (WINDOW_WIDTH / GRID_SIZE / 2);
+
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            drawCircle(renderer, centerX, centerY, radius);
+        }
+
+        SDL_RenderPresent(renderer);
+        // SDL_Delay(100); // Commentato per ridurre il ritardo
     }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
