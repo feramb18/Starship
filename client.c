@@ -34,7 +34,6 @@ void drawCircle(SDL_Renderer *renderer, int centerX, int centerY, int radius) {
 }
 
 int main() {
-    int alert=0;
     int sockfd;
     struct sockaddr_in servaddr;
     struct Debris debris[DEBRIS_COUNT];
@@ -56,10 +55,11 @@ int main() {
     //implementazione libreria SDL//
 
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *window = SDL_CreateWindow("Starship", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    SDL_Window *window = SDL_CreateWindow("Starship", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH,
+                                          WINDOW_HEIGHT, 0);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-    if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+    if (bind(sockfd, (const struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
         perror("Binding fallito");
         exit(EXIT_FAILURE);
     }
@@ -69,76 +69,81 @@ int main() {
     spaceship.width = 50; // Imposta una larghezza
     spaceship.height = 30; // Imposta un'altezza
 
+    int verticalMargin = 500; // Margine verticale sopra l'astronave per attivare l'allarme
     while (!quit) {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Nero per lo sfondo
-        SDL_RenderClear(renderer); // Pulisci lo schermo per il nuovo frame
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Imposta il colore di sfondo su nero
+        SDL_RenderClear(renderer); // Pulisci il frame corrente
 
+        // Gestione degli eventi di input
         while (SDL_PollEvent(&event) != 0) {
             if (event.type == SDL_QUIT) {
                 quit = 1;
             } else if (event.type == SDL_KEYDOWN) {
                 switch (event.key.keysym.sym) {
                     case SDLK_LEFT:
-                        spaceship.x -= 30; // Sposta a sinistra
-                        if (spaceship.x < 0) spaceship.x = 0; // Controlla i limiti dello schermo
+                        spaceship.x -= 50; // Sposta a sinistra
+                        if (spaceship.x < 0) spaceship.x = 0; // Evita di uscire dallo schermo
                         break;
                     case SDLK_RIGHT:
-                        spaceship.x += 30; // Sposta a destra
-                        if (spaceship.x > WINDOW_WIDTH - spaceship.width) spaceship.x = WINDOW_WIDTH - spaceship.width; // Controlla i limiti
+                        spaceship.x += 50; // Sposta a destra
+                        if (spaceship.x > WINDOW_WIDTH - spaceship.width) spaceship.x = WINDOW_WIDTH -
+                                                                                        spaceship.width; // Evita di uscire dallo schermo
+                    //case SDLK_ESCAPE:
+                       // quit = 1; // Premendo "Esc", esci dal gioco
                         break;
                 }
             }
         }
 
+        // Ricezione dei detriti dal server
         if (recvfrom(sockfd, debris, sizeof(debris), 0, NULL, NULL) < 0) {
             perror("recvfrom failed");
             continue;
         }
-
+        int alert=0; // Resetta l'allarme per ogni frame
         // Rendering dei detriti
         for (int i = 0; i < DEBRIS_COUNT; i++) {
-            int centerX = debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
-            int centerY = debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Bianco per i detriti
-            drawCircle(renderer, centerX, centerY, 30); // Usa la tua funzione drawCircle
+            if (debris[i].active) {
+                int centerX = debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
+                int centerY = debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
+
+                // Verifica se il detrito è entro il margine verticale sopra l'astronave
+                if (centerY >= spaceship.y - verticalMargin && centerY < spaceship.y + spaceship.height) {
+                    if (centerX >= spaceship.x && centerX <= spaceship.x + spaceship.width) {
+                        alert = 1; // Attiva l'allarme se il detrito è direttamente sopra l'astronave entro il margine verticale
+                    }
+                }
+
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Imposta il colore dei detriti su bianco
+                drawCircle(renderer, centerX, centerY, 20); // Disegna il detrito come un cerchio
+            }
         }
 
-        // Rendering della navicella
+        // Rendering dell'astronave
         SDL_Rect spaceshipRect = {spaceship.x, spaceship.y, spaceship.width, spaceship.height};
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Bianco per la navicella
-        SDL_RenderFillRect(renderer, &spaceshipRect);
-
-        // Controllo delle collisioni
+        int score=0;
         for (int i = 0; i < DEBRIS_COUNT; i++) {
             SDL_Rect debrisRect = {debris[i].x * (WINDOW_WIDTH / GRID_SIZE), debris[i].y * (WINDOW_HEIGHT / GRID_SIZE), 30, 30}; // Approssima i detriti come rettangoli per la collisione
             if (SDL_HasIntersection(&spaceshipRect, &debrisRect)) {
                 printf("Collision detected!\n"); // Gestisci la collisione qui
-                 quit = 1; // Decommenta per terminare il gioco in caso di collisione
+                score=score+1; // Decommenta per terminare il gioco in caso di collisione
+            }else{
+                score=score-10;
             }
+            printf("\nScore:\n %d",score);
         }
-        for(int i=0;i<DEBRIS_COUNT;i++){
-            if (debris[i].active) {
-                // Controlla se il detrito è sulla traiettoria della navicella
-                if (debris[i].x >= spaceship.x && debris[i].x <= spaceship.x + spaceship.width) {
-                    alert = 1; // Imposta l'allerta
-                    break; // Esce dal ciclo se viene trovato un detrito sulla traiettoria
-                }
-            }
-        }
-        // Cambia il colore della navicella in caso di allerta
         if (alert) {
-            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // Rosso per l'allerta
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0,
+                                   255); // Imposta il colore dell'astronave su rosso in caso di allarme
         } else {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Bianco normalmente
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Altrimenti, usa il colore bianco
         }
-        SDL_RenderFillRect(renderer, &spaceshipRect);
+        SDL_RenderFillRect(renderer, &spaceshipRect); // Disegna l'astronave
 
-
-        SDL_RenderPresent(renderer); // Aggiorna lo schermo con il rendering appena eseguito
-        // SDL_Delay(100); // Decommenta per controllare il frame rate
+        SDL_RenderPresent(renderer); // Aggiorna lo schermo con il nuovo frame renderizzato
     }
 
-// Pulizia
+// Pulizia e chiusura
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
