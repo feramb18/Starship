@@ -24,6 +24,11 @@ struct Spaceship {
 };
 
 struct Debris debris[MAX_DEBRIS]; // Array per gestire più generazioni di detriti
+struct DebrisPacket {
+    struct Debris debris[MAX_DEBRIS];
+};
+
+struct DebrisPacket debrisReceivedPacket;
 
 
 void drawCircle(SDL_Renderer *renderer, int centerX, int centerY, int radius) {
@@ -96,16 +101,17 @@ int main() {
         }
 
         // Ricezione dei detriti dal server
-        if (recvfrom(sockfd, debris, sizeof(debris), 0, NULL, NULL) < 0) {
+        int receivedDebrisCount = recvfrom(sockfd, &debrisReceivedPacket, sizeof(struct DebrisPacket), 0, NULL, NULL);
+        if (receivedDebrisCount < 0) {
             perror("recvfrom failed");
             continue;
         }
         int alert=0; // Resetta l'allarme per ogni frame
         // Rendering dei detriti
-        for (int i = 0; i < DEBRIS_COUNT; i++) {
-            if (debris[i].active) {
-                int centerX = debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
-                int centerY = debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
+        for (int i = 0; i < receivedDebrisCount; i++) {
+            if (debrisReceivedPacket.debris[i].active) {
+                int centerX = debrisReceivedPacket.debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
+                int centerY = debrisReceivedPacket.debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
 
                 // Verifica se il detrito è entro il margine verticale sopra l'astronave
                 if (centerY >= spaceship.y - verticalMargin && centerY < spaceship.y + spaceship.height) {

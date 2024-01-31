@@ -9,14 +9,16 @@
 #define PORT 12345
 #define GRID_SIZE 10
 #define MAX_DEBRIS 20
-#define MAX_DETRITI 1
+#define MAX_DETRITI 3
 #define WINDOW_HEIGHT 10
 #define DEBRIS_GENERATION_INTERVAL 2000000 // 2 secondi in microsecondi
 struct Debris {
     int x, y;
     int active;
 };
-
+struct DebrisPacket {
+    struct Debris debris[MAX_DEBRIS];
+};
 struct Debris debris[MAX_DEBRIS];
 
 void initDebris() {
@@ -44,12 +46,17 @@ void updateDebrisPositions() {
     }
 }
 
-void sendDebrisPositions(int sockfd, struct sockaddr_in *clientAddr) {
+void sendDebrisPacket(int sockfd, struct sockaddr_in *clientAddr) {
+    struct DebrisPacket packet;
+    memset(&packet, 0, sizeof(struct DebrisPacket));
+
     for (int i = 0; i < GRID_SIZE; i++) {
         if (debris[i].active) {
-            sendto(sockfd, &debris[i], sizeof(struct Debris), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr));
+            packet.debris[i] = debris[i];
         }
     }
+
+    sendto(sockfd, &packet, sizeof(struct DebrisPacket), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr));
 }
 
 int main() {
@@ -64,7 +71,7 @@ int main() {
     }
     memset(&cliaddr, 0, sizeof(cliaddr));
     cliaddr.sin_family = AF_INET;
-    cliaddr.sin_addr.s_addr = inet_addr("192.168.1.213");
+    cliaddr.sin_addr.s_addr = inet_addr("10.22.53.22"); //ip
     cliaddr.sin_port = htons(PORT);
 
     srand(time(NULL));
@@ -81,7 +88,7 @@ int main() {
         }
 
         updateDebrisPositions();
-        sendDebrisPositions(sockfd, &cliaddr);
+        sendDebrisPacket(sockfd, &cliaddr);
         usleep(50000); // Controlla la velocità di aggiornamento dei detriti
     }
 
