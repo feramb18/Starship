@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <string.h>
-#define PORT 12345
+#define PORT 4550
 #define GRID_SIZE 10
 #define MAX_DEBRIS 20
 #define MAX_DETRITI 3
@@ -48,20 +48,20 @@ void updateDebrisPositions() {
 
 void sendDebrisPacket(int sockfd, struct sockaddr_in *clientAddr) {
     struct DebrisPacket packet;
-    memset(&packet, 0, sizeof(struct DebrisPacket));
-
     for (int i = 0; i < GRID_SIZE; i++) {
-        if (debris[i].active) {
-            packet.debris[i] = debris[i];
+       if (debris[i].active) {
+           packet.debris[i] = debris[i];
         }
     }
-
-    sendto(sockfd, &packet, sizeof(struct DebrisPacket), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr));
+    if (sendto(sockfd, &packet, sizeof(struct DebrisPacket), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr)) <0)
+            {
+        perror("Errore nell'invio del pacchetto dei detriti");
+            }
 }
 
 int main() {
     int sockfd;
-    struct sockaddr_in cliaddr;
+    struct sockaddr_in servaddr;
     struct timeval lastDebrisTime, currentTime;
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -69,14 +69,28 @@ int main() {
         perror("Errore nella creazione del socket");
         exit(EXIT_FAILURE);
     }
-    memset(&cliaddr, 0, sizeof(cliaddr));
-    cliaddr.sin_family = AF_INET;
-    cliaddr.sin_addr.s_addr = inet_addr("10.22.53.22"); //ip
-    cliaddr.sin_port = htons(PORT);
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(PORT);
 
+    if (bind(sockfd, (const struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+        perror("Binding fallito");
+        exit(EXIT_FAILURE);
+    }
     srand(time(NULL));
     memset(debris, 0, sizeof(debris));
     gettimeofday(&lastDebrisTime, NULL);
+    char buffer[1024];
+    struct sockaddr_in clientAddr;
+    socklen_t len = sizeof(clientAddr);
+    if(recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&clientAddr, &len)<0){
+        perror("Errore nella ricezione del messaggio");
+        close(sockfd);
+        exit(1);
+    }
+
+    printf(": %s", buffer);
     initDebris();
 
     while (1) {
@@ -88,10 +102,9 @@ int main() {
         }
 
         updateDebrisPositions();
-        sendDebrisPacket(sockfd, &cliaddr);
+        sendDebrisPacket(sockfd, &clientAddr);
         usleep(50000); // Controlla la velocità di aggiornamento dei detriti
     }
 
-    close(sockfd);
     return 0;
 }
