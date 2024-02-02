@@ -30,7 +30,9 @@ struct DebrisPacket {
 
 struct DebrisPacket debrisReceivedPacket;
 
-
+struct SpaceshipPosition {
+    int x;
+};
 void drawCircle(SDL_Renderer *renderer, int centerX, int centerY, int radius) {
     for (int y = -radius; y <= radius; y++)
         for (int x = -radius; x <= radius; x++)
@@ -54,26 +56,14 @@ int main() {
 
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("192.168.1.115"); //ip
+    servaddr.sin_addr.s_addr = inet_addr("192.168.1.146"); //ip
     servaddr.sin_port = htons(PORT);
-    //implementazione libreria SDL//
 
+    //implementazione libreria SDL//
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *window = SDL_CreateWindow("Starship", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH,
                                           WINDOW_HEIGHT, 0);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-
-
-    // Messaggio di prova da inviare
-    char *message = "Questo è un messaggio di prova";
-
-    // Invia il messaggio al server
-    if (sendto(sockfd, message, strlen(message), 0, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
-        perror("Errore nell'invio del messaggio");
-        close(sockfd);
-        exit(1);
-    }
-    printf("Messaggio inviato con successo al server.\n");
 
     struct Spaceship spaceship;
     spaceship.x = WINDOW_WIDTH / 2; // Posiziona la navicella al centro in orizzontale
@@ -85,6 +75,7 @@ int main() {
     while (!quit) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Imposta il colore di sfondo su nero
         SDL_RenderClear(renderer); // Pulisci il frame corrente
+        struct SpaceshipPosition pos;
         // Gestione degli eventi di input
         while (SDL_PollEvent(&event) != 0) {
             if (event.type == SDL_QUIT) {
@@ -92,22 +83,32 @@ int main() {
             } else if (event.type == SDL_KEYDOWN) {
                 switch (event.key.keysym.sym) {
                     case SDLK_LEFT:
-                        spaceship.x -= 50; // Sposta a sinistra
-                        //if (spaceship.x < 0) spaceship.x = 0; // Evita di uscire dallo schermo
+                        spaceship.x -= 100; // Sposta a sinistra
+                        // Assicurati che la navicella non esca dallo schermo sulla sinistra
+                        if (spaceship.x < 0) spaceship.x = 0;
                         break;
+
                     case SDLK_RIGHT:
-                        spaceship.x += 50; // Sposta a destra
-                        if (spaceship.x > WINDOW_WIDTH - spaceship.width){
-                            spaceship.x = WINDOW_WIDTH -spaceship.width; // Evita di uscire dallo schermo
+                        spaceship.x += 100; // Sposta a destra
+                        // Assicurati che la navicella non esca dallo schermo sulla destra
+                        if (spaceship.x > WINDOW_WIDTH - spaceship.width) {
+                            spaceship.x = WINDOW_WIDTH - spaceship.width;
+                        }
+                        break;
+
                     case SDLK_ESCAPE:
                         quit = 1; // Premendo "Esc", esci dal gioco
-                        break;}
+                        break;
                 }
             }
         }
-
-        // Ricezione dei detriti dal server
-        int receivedDebrisCount=recvfrom(sockfd, &debrisReceivedPacket, sizeof(struct DebrisPacket), 0, NULL,NULL);
+// Aggiorna la posizione della navicella da inviare al server
+                pos.x = spaceship.x;
+// Invia la posizione aggiornata al server
+printf("invio in posizione %d",pos.x);
+sendto(sockfd, &pos, sizeof(pos), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+   // Ricezione dei detriti dal server
+   int receivedDebrisCount=recvfrom(sockfd, &debrisReceivedPacket, sizeof(struct DebrisPacket), 0, NULL,NULL);
                 if (receivedDebrisCount < 0) {
             perror("recvfrom failed");
             continue;
