@@ -63,18 +63,7 @@ void initDebris() {
 }
 
 //Generazione detriti in traiettoria della navicella
-void generateDebrisBasedOnSpaceship(int pos)
- {
-    int count = 0;
-    for (int i = 0; i < GRID_SIZE; i++) {
-        if (!debris[i].active && count < MAX_DETRITI) {
-            debris[i].x = pos;
-            debris[i].y = 0;
-            debris[i].active = 1;
-            count++; // Incrementa il contatore per ogni detrito aggiunto
-        }
-    }
-}
+
 //Aggiornamento posizioni detriti attivi, spostandoli una volta arrivati verso il basso, in alto, in posizione randomica
 void updateDebrisPositions() {
     int count = 0;
@@ -97,11 +86,24 @@ void sendDebrisPacket(int sockfd, struct sockaddr_in *clientAddr) {
        if (debris[i].active) {
            packet.debris[i] = debris[i];
         }
+        printf("check position:%d \n",packet.debris[i].x);
     }
     if (sendto(sockfd, &packet, sizeof(struct DebrisPacket), 0, (struct sockaddr *)clientAddr, sizeof(*clientAddr)) <0)
             {
         perror("Errore nell'invio del pacchetto dei detriti");
             }
+}
+void generateDebrisBasedOnSpaceship(int pos)
+{
+    int count = 0;
+    for (int i = 0; i < GRID_SIZE; i++) {
+        if (!debris[i].active && count < MAX_DETRITI) {
+            debris[i].x = pos;
+            debris[i].y = 0;
+            debris[i].active = 1;
+            count++; // Incrementa il contatore per ogni detrito aggiunto
+        }
+    }
 }
 
 int main() {
@@ -156,7 +158,6 @@ int main() {
             //Pronto per l'invio dei dati
         recvfrom(sockfd, &pos, sizeof(pos), 0, (struct sockaddr*)&clientAddr, &clientAddrLen); //ricezione dati dal socket
             generateDebrisBasedOnSpaceship(pos.x);
-            printf("ricevo in posizione %d\n",pos.x);
 
         } else {
             //Nessun dato disponibile, quindi genera detriti casuali

@@ -24,8 +24,6 @@ struct Spaceship {
 
 struct Spaceship spaceship;
 
-struct Debris debris[MAX_DEBRIS]; // Array per gestire più generazioni di detriti
-
 //invio dei detriti
 struct DebrisPacket {
     struct Debris debris[MAX_DEBRIS];
@@ -65,7 +63,7 @@ int main() {
     //Configurazione indirizzo socket del server
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("192.168.1.149"); //ip
+    servaddr.sin_addr.s_addr = inet_addr("192.168.1.146"); //ip
     servaddr.sin_port = htons(PORT);
 
     //implementazione libreria SDL
@@ -117,19 +115,20 @@ int main() {
         //Aggiorna la posizione della navicella da inviare al server
         pos.x = spaceship.x;
         printf("invio in posizione %d\n",pos.x);
-
         //Invia la posizione aggiornata al server
         sendto(sockfd, &pos, sizeof(pos), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
         // Ricezione dei detriti dal server
-   int receivedDebrisCount=recvfrom(sockfd, &debrisReceivedPacket, sizeof(struct DebrisPacket), 0, NULL,NULL);
-                if (receivedDebrisCount < 0) {
-            perror("recvfrom failed");
+if(recvfrom(sockfd, &debrisReceivedPacket, sizeof(struct DebrisPacket), 0, NULL,NULL)<0)
+{ perror("recvfrom failed");
             continue;
+        }
+        for (int i = 0; i < sizeof(struct DebrisPacket) ; i++) {
+            printf("RICEVO in %d \n",debrisReceivedPacket.debris[i].x);
         }
                 int alert=0; // Flag che parte da 0, se il detrito è in traiettoria diventa 1
         //Rendering dei detriti
-        for (int i = 0; i < receivedDebrisCount; i++) {
+        for (int i = 0; i < 6; i++) {
             if (debrisReceivedPacket.debris[i].active) {
                 int centerX = debrisReceivedPacket.debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
                 int centerY = debrisReceivedPacket.debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
