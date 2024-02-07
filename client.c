@@ -11,7 +11,7 @@
 #define PORT 4550
 #define GRID_SIZE 10
 #define MAX_DEBRIS 50 // Numero massimo di detriti che possono essere gestiti contemporaneamente
-
+#define MAX_DETRITI 4
 struct Debris {
     int x, y;
     int active; // 1 se il detrito è attivo, 0 altrimenti
@@ -128,7 +128,7 @@ if(recvfrom(sockfd, &debrisReceivedPacket, sizeof(struct DebrisPacket), 0, NULL,
         }
                 int alert=0; // Flag che parte da 0, se il detrito è in traiettoria diventa 1
         //Rendering dei detriti
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < MAX_DETRITI; i++) {
             if (debrisReceivedPacket.debris[i].active) {
                 int centerX = debrisReceivedPacket.debris[i].x * (WINDOW_WIDTH / GRID_SIZE) + (WINDOW_WIDTH / GRID_SIZE / 2);
                 int centerY = debrisReceivedPacket.debris[i].y * (WINDOW_HEIGHT / GRID_SIZE) + (WINDOW_HEIGHT / GRID_SIZE / 2);
